@@ -276,4 +276,8 @@ class Satelit extends CI_Controller
         }
         echo json_encode($datakembali);
     }
+
+    function getstatus(){
+        echo 'hello';
+    }
 }
