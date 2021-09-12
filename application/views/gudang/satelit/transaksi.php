@@ -8,7 +8,7 @@
                     <i class="far fa-calendar-alt"></i>
                 </span>
             </div>
-            <input type="text" class="form-control float-right" id="filterdate" name="filterdate">
+            <input type="text" class="form-control" id="Tahun" autocomplete="off">
         </div>
         <button class="btn btn-sm btn-danger mt-2" id="btn-reset-filter"><i class="fas fa-filter text-light mr-1"></i><span>reset filter</span></button>
     </div>
@@ -46,8 +46,11 @@
                 </button>
             </div>
             <div class="modal-body">
+                <blockquote class="quote-danger">
+                    <small class="text-danger">Pastikan stok tersedia, jika tidak tersedia dan input lebih dari jumlah stok maka tidak bisa</small>
+                </blockquote>
                 <div class="row">
-                    <div class="col-sm-6 col-xs-12">
+                    <div class="col-md-6 col-sm-12 col-xs-12">
                         <div class="form-group">
                             <label>Nama Obat</label>
                             <select class="form-control" id="IdObat" name="IdObat" style="width: 100%;">
@@ -61,7 +64,7 @@
                             <div id="errorsatelit" class="text-danger"></div>
                         </div>
                         <div class="form-group">
-                            <label for="forTanggal">Bulan dan Tahun</label>
+                            <label for="forTanggal">Tahun</label>
                             <div class="input-group">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">
@@ -73,57 +76,51 @@
                             <div id="errortanggal" class="text-danger"></div>
                         </div>
                         <button class="btn btn-sm btn-success" type="button" class="btn-cekstok" id="btn-cekstok">Cek Stok</button>
-                        <blockquote class="quote-danger">
-                            <span class="text-danger">Pastikan stok tersedia, jika tidak tersedia dan input lebih dari jumlah stok maka tidak bisa</span>
-                        </blockquote>
                     </div>
-                    <div class=" col-md-6 col-sm-12 col-xs-12">
+
+                    <div class="col-md-6 col-sm-12 col-xs-12">
+                        <br>
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
                                     <th style="width: 10px">#</th>
                                     <th>Data</th>
-                                    <th style="width: 40px">Label</th>
+                                    <th style="width: 40px">Jumlah</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td>1.</td>
-                                    <td>Stok Penerimaan</td>
-                                    <td><span class="badge bg-success" id="StokPenerimaan"></span></td>
+                                    <td>Penerimaan</td>
+                                    <td><span class="badge bg-info" id="Penerimaan"></span></td>
                                 </tr>
                                 <tr>
                                     <td>2.</td>
-                                    <td>Stok Aktif <span style="font-size: 12px;">(sisa stok sebelumnya + stok penerimaan bulan dipilih)</span></td>
-                                    <td><span class="badge bg-info" id="StokAktif"></span></td>
+                                    <td>Pemakian</td>
+                                    <td><span class="badge bg-success" id="Pemakaian"></span></td>
                                 </tr>
                                 <tr>
                                     <td>3.</td>
-                                    <td>Mutasi Keluar <p><small>(Mutasi Keluar Bulan Dipilih)</small></p></td>
-                                    <td><span class="badge bg-danger" id="MutasiKeluar"></span></td>
-                                </tr>
-                                <tr>
-                                    <td>4.</td>
-                                    <td>Mutasi Rusak <p><small>(Mutasi Rusak Bulan Dipilih)</small></p></td>
-                                    <td><span class="badge bg-danger" id="MutasiRusak"></span></td>
-                                </tr>
-                                <tr>
-                                    <td>5.</td>
-                                    <td>Total Mutasi</td>
-                                    <td><span class="badge bg-danger" id="SatelitPemakianBulanDipilih"></span></td>
-                                </tr>
-                                <tr>
-                                    <td>6.</td>
                                     <td>Sisa Stok</td>
-                                    <td><span class="badge bg-warning"></span></td>
+                                    <td><span class="badge bg-warning" id="SisaStok"></span></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
                 </div>
-
-
                 <hr>
+                <div class="form-group">
+                    <label for="forTanggal">Tanggal</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="fas fa-sort-numeric-up-alt"></i>
+                            </span>
+                        </div>
+                        <input type="date" class="form-control" id="TanggalData" name="TanggalData">
+                    </div>
+                </div>
                 <div class="form-group">
                     <label for="forJumlahDistri">Mutasi Keluar</label>
                     <div class="input-group">
@@ -146,6 +143,7 @@
                         <input type="number" class="form-control" id="MutasiRusak" name="MutasiRusak">
                     </div>
                 </div>
+                <div id="warningcheck" class="text-danger"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -158,10 +156,11 @@
 <script>
     var IdStok = [];
     $(document).ready(function() {
+
         $('#Tanggal').datepicker({
-            format: "mm-yyyy",
-            startView: "months",
-            minViewMode: "months"
+            format: "yyyy",
+            startView: "years",
+            minViewMode: "years"
         })
         tabels = $('#satelitmutasi').DataTable({
             autoWidth: false,
@@ -266,19 +265,16 @@
                     Tanggal: $('#Tanggal').val()
                 },
                 success: function(data) {
-                    console.log(data);
                     if (data.keterangan === 'requiredfalse') {
                         errorObat.innerHTML = data.error[0];
                         errorSatelit.innerHTML = data.error[1];
                         errorTanggal.innerHTML = data.error[2];
                     } else {
-                        $('#StokPenerimaan').text(data.StokPenerimaan[0].StokPenerimaan);
-                        $('#SatelitPemakianBulanDipilih').text(data.SatelitPemakianBulanDipilih[0].TotalMutasi);
-                        $('#MutasiKeluar').text(data.SatelitPemakianBulanDipilih[0].MutasiKeluar);
-                        $('#MutasiRusak').text(data.SatelitPemakianBulanDipilih[0].MutasiRusak);
-                        // $('#stokgudangsatelit').text(data.StokGudangSatelit[0].Jumlah - data.JumlahSemuaMutasiSatelit[0].SemuaMutasi);
-                        // $('#mutasisatelit').text(data.MutasiSatelit[0].Mutasi);
-                        // $('#sisastok').text(data.StokGudangSatelit[0].Jumlah - data.MutasiSatelit[0].Mutasi);
+                        $('#Penerimaan').text((data.stokPenerimaan != null) ? data.stokPenerimaan : 0);
+                        // $('#StokAktif').text((data.StokAktif != null) ? data.StokAktif : 0);
+                        // $('#StokPenerimaan').text((data.StokPenerimaan != null) ? data.StokPenerimaan : 0);
+                        $('#Pemakaian').text((data.stokPemakaian != null) ? data.stokPemakaian : 0);
+                        $('#SisaStok').text((data.sisaStok != null) ? data.sisaStok : 0);
                     }
                 }
             });
@@ -286,7 +282,74 @@
             errorSatelit.innerHTML = ' ';
             errorTanggal.innerHTML = ' ';
         });
+
+        $('#SimpanData').click(() => {
+            Swal.fire({
+                icon: 'warning',
+                title : 'Apakah anda yakin?',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Simpan!',
+                cancelButtonText: 'Batalkan!', 
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '<?= base_url() ?>' + 'gudang/satelit/tambahtransaksi',
+                        type: 'POST',
+                        dataType: 'JSON',
+                        data: {
+                            IdObat: $('#IdObat').val(),
+                            IdSatelit: $('#IdSatelit').val(),
+                            TanggalFilter: $('#Tanggal').val(),
+                            Tanggal: $('#TanggalData').val(),
+                            MutasiKeluar: $('#MutasiKeluar').val(),
+                            mutasiRusak: $('#MutasiRusak').val(),
+                            sisaStok: $('#SisaStok').text()
+                        },
+                        success: function(data) {
+                            if (data.keterangan === 'requiredfalse') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'data tidak lengkap!',
+                                });
+                            } else if (data.keterangan === 'dataterlalubanyak') {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'data mutasi terlalu banyak!',
+                                    text: 'Jumlah mutasi keluar atau mutasi rusak melebihi jumlah sisa stok!'
+                                });
+                                
+                            } else if(data.keterangan === 'datamiss'){
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Data tidak sinkron!',
+                                    text: 'Data tidak sinkron karena tanggal yang dipilih tidak sesuai dengan stok yang dicek!'
+                                });
+                            } else if(data.keterangan === true) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'data berhasil disimpan!',
+                                });
+                                tabels.ajax.reload();
+                                $('#tambahtransaksi').modal('hide');
+                            }else{
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'data gagal disimpan!',
+                                });
+                                $('#tambahtransaksi').modal('hide');
+                            }
+                        }
+                    })
+                }
+            });
+
+        })
+        $('body').on('hidden.bs.modal', '.modal', function() {
+            $(this).removeData('bs.modal');
+        });
     });
+
+
 
     //filter daterange
     function filteredbydate(dateValue) {

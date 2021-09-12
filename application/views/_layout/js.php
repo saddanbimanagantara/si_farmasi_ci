@@ -23,7 +23,7 @@
     <script src="<?= base_url('assets') ?>/plugins/daterangepicker/daterangepicker.js"></script>
     <!-- date-picker -->
     <script src="<?= base_url('assets') ?>/plugins/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/js/bootstrap-datepicker.js"></script>
+    <script src="<?= base_url('assets') ?>/plugins/bootstrap-datepicker/bootstrap-datepicker.js"></script>
     <!-- year-picker -->
     <script src="<?= base_url('assets') ?>/plugins/YearPicker-master/dist/yearpicker.js"></script>
     <!-- SweetAlert2 -->

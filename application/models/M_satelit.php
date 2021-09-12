@@ -164,11 +164,12 @@ class M_satelit extends CI_Model
             SUM(CASE WHEN gudangsatelit.Tanggal >= "' . $_POST['Tahun'] . '-9-26" AND gudangsatelit.Tanggal <= "' . ($_POST['Tahun']) . '-10-25" THEN gudangsatelit.Jumlah ELSE 0 END) AS Oktober,
             SUM(CASE WHEN gudangsatelit.Tanggal >= "' . $_POST['Tahun'] . '-10-26" AND gudangsatelit.Tanggal <= "' . ($_POST['Tahun']) . '-11-25" THEN gudangsatelit.Jumlah ELSE 0 END) AS November,
             SUM(CASE WHEN gudangsatelit.Tanggal >= "' . $_POST['Tahun'] . '-11-26" AND gudangsatelit.Tanggal <= "' . ($_POST['Tahun']) . '-12-25" THEN gudangsatelit.Jumlah ELSE 0 END) AS Desember,
-            SUM(gudangsatelit.Jumlah) AS "TotalDistribusi"
+            SUM(CASE WHEN gudangsatelit.Tanggal >= "' . ($_POST['Tahun']-1) . '-12-26" AND gudangsatelit.Tanggal <= "' . ($_POST['Tahun']) . '-12-25" THEN gudangsatelit.Jumlah ELSE 0 END) AS TotalDistribusi,
             ');
             $this->db->from('gudangsatelit');
             $this->db->join('satelit', 'gudangsatelit.IdSatelit=satelit.IdSatelit AND satelit.IdSatelit=' . $_POST['IdSatelit']);
             $this->db->join('obat', 'gudangsatelit.IdObat=obat.IdObat', 'right');
+            $tahun = $_POST['Tahun'];
             $this->db->group_by('obat.IdObat');
             $i = 0;
             foreach ($this->column_searchdistrirekap as $item) {
@@ -392,6 +393,7 @@ class M_satelit extends CI_Model
         $query = $this->db->get();
         return $query->result();
     }
+
     function countFilteredDistri()
     {
         $this->_querydistrirekap();
@@ -413,7 +415,7 @@ class M_satelit extends CI_Model
 
     var $column_orderMutasi = array();
     var $column_searchMutasi = array();
-    var $orderMutasi = array('obat.IdObat' => 'asc');
+    var $orderMutasi = array('satelitmutasi.IdTransaksiSatelit' => 'asc');
 
     function _querysatelitmutasi()
     {
@@ -467,103 +469,15 @@ class M_satelit extends CI_Model
         return $this->db->count_all_results();
     }
 
-    function StokGudangSatelitAktif($IdObat, $IdSatelit, $Tanggal)
-    {
-        $Tanggal = explode('-', $Tanggal);
-        if ($Tanggal[0] == 1) {
-            $this->db->select('IdObat,
-            SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' . ($Tanggal[1]) . '-1-25" THEN Jumlah ELSE 0 END) AS Jumlah');
-        } else {
-            $this->db->select('IdObat,
-            SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' . ($Tanggal[1]) . '-' . $Tanggal[0] . '-25" THEN Jumlah ELSE 0 END) AS Jumlah');
-        }
-        $this->db->from('gudangsatelit');
-        $this->db->where('IdObat', $IdObat);
-        $this->db->where('IdSatelit', $IdSatelit);
-        $this->db->group_by('IdObat');
-        $query = $this->db->get();
-        if ($query->num_rows() <= 0) {
-            return array(array('IdObat' => $IdObat, 'Jumlah' => 0));
-        } else {
-            return $query->result();
-        }
-    }
-
-    function StokPenerimaanSatelit($IdObat, $IdSatelit, $Tanggal)
-    {
-        $Tanggal = explode('-', $Tanggal);
-        if ($Tanggal[0] == 1) {
-            $this->db->select('SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' . $Tanggal[1] . '-1-25" THEN Jumlah ELSE 0 END) AS StokPenerimaan');
-        } else {
-            $this->db->select('SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1]) . '-' . ($Tanggal[0] - 1) . '-26" AND Tanggal <= "' . $Tanggal[1] . '-' . $Tanggal[0] . '-25" THEN Jumlah ELSE 0 END) AS StokPenerimaan');
-        }
-        $this->db->from('gudangsatelit');
-        $this->db->where('IdObat', $IdObat);
-        $this->db->where('IdSatelit', $IdSatelit);
-        $query = $this->db->get();
-        if ($query->num_rows() <= 0) {
-            return array('StokPenerimaan' => 0);
-        } else {
-            return $query->result();
-        }
-    }
-
-    function SatelitPemakaian($IdObat, $IdSatelit, $Tanggal)
-    {
-        $Tanggal = explode('-', $Tanggal);
-        if($Tanggal[0] == 1){
-            $start_date = ($Tanggal[1]-1).'-12-26';
-            $end_date = $Tanggal[1].'-'.$Tanggal[0].'-25';
-        }else{
-            $start_date = $Tanggal[1].'-'.($Tanggal[0]-1).'-26';
-            $end_date = $Tanggal[1].'-'.$Tanggal[0].'-25';
-        }
-        $this->db->select('SUM(MutasiKeluar) AS MutasiKeluar, SUM(MutasiRusak) AS MutasiRusak,SUM(MutasiKeluar+MutasiRusak) as TotalMutasi');
-        $this->db->from('satelitmutasi');
-        $this->db->where('Tanggal BETWEEN "' . date('Y-m-d', strtotime($start_date)) . '" and "' . date('Y-m-d', strtotime($end_date)) . '"');
-        $this->db->where('IdObat', $IdObat);
-        $this->db->where('IdSatelit', $IdSatelit);
-
-        $query = $this->db->get();
-        if ($query->num_rows() <= 0) {
-            return array('TotalMutasi' => 0);
-        } else {
-            return $query->result();
-        }
-    }
-
-    function SatelitPemakaianRangeBulan($IdObat, $IdSatelit, $Tanggal){
-        $Tanggal = explode('-', $Tanggal);
-        if($Tanggal[0] == 1){
-            $start_date = ($Tanggal[1]-1).'-12-26';
-            $end_date = $Tanggal[1].'-'.$Tanggal[0].'-25';
-        }else{
-            $start_date = ($Tanggal[1]-1).'-12-26';
-            $end_date = $Tanggal[1].'-'.($Tanggal[0]-1).'-25';
-        }
-        $this->db->select('SUM(MutasiKeluar+MutasiRusak) as TotalMutasi');
-        $this->db->from('satelitmutasi');
-        $this->db->where('Tanggal BETWEEN "' . date('Y-m-d', strtotime($start_date)) . '" and "' . date('Y-m-d', strtotime($end_date)) . '"');
-        $this->db->where('IdObat', $IdObat);
-        $this->db->where('IdSatelit', $IdSatelit);
-
-        $query = $this->db->get();
-        if ($query->num_rows() <= 0) {
-            return array('TotalMutasi' => 0);
-        } else {
-            return $query->result();
-        }
-    }
-
-
-    // function StokPenerimaan($IdObat, $IdSatelit, $Tanggal){
+    // function StokAktif($IdObat, $IdSatelit, $Tanggal)
+    // {
     //     $Tanggal = explode('-', $Tanggal);
     //     if ($Tanggal[0] == 1) {
     //         $this->db->select('IdObat,
     //         SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' . ($Tanggal[1]) . '-1-25" THEN Jumlah ELSE 0 END) AS Jumlah');
     //     } else {
     //         $this->db->select('IdObat,
-    //         SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-'.$Tanggal[0].'-26" AND Tanggal <= "' . ($Tanggal[1]) . '-' . $Tanggal[0] . '-25" THEN Jumlah ELSE 0 END) AS Jumlah');
+    //         SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' . ($Tanggal[1]) . '-' . $Tanggal[0] . '-25" THEN Jumlah ELSE 0 END) AS Jumlah');
     //     }
     //     $this->db->from('gudangsatelit');
     //     $this->db->where('IdObat', $IdObat);
@@ -577,46 +491,98 @@ class M_satelit extends CI_Model
     //     }
     // }
 
-    // function SemuaMutasiSatelit($IdObat, $IdSatelit, $Tanggal)
+    // function StokPenerimaan($IdObat, $IdSatelit, $Tanggal)
     // {
     //     $Tanggal = explode('-', $Tanggal);
-    //     $this->db->select('IdObat,
-    //         SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' .  $Tanggal[1] . '-' . ($Tanggal[0]) . '-25" THEN (MutasiKeluar+MutasiRusak) ELSE 0 END) AS SemuaMutasi
-    //         ');
-    //     $this->db->from('satelitmutasi');
+    //     if ($Tanggal[0] == 1) {
+    //         $this->db->select('SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' . $Tanggal[1] . '-1-25" THEN Jumlah ELSE 0 END) AS StokPenerimaan');
+    //     } else {
+    //         $this->db->select('SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1]) . '-' . ($Tanggal[0] - 1) . '-26" AND Tanggal <= "' . $Tanggal[1] . '-' . $Tanggal[0] . '-25" THEN Jumlah ELSE 0 END) AS StokPenerimaan');
+    //     }
+    //     $this->db->from('gudangsatelit');
     //     $this->db->where('IdObat', $IdObat);
     //     $this->db->where('IdSatelit', $IdSatelit);
-    //     $this->db->group_by('IdObat');
     //     $query = $this->db->get();
     //     if ($query->num_rows() <= 0) {
-    //         return array(array('IdObat' => $IdObat, 'SemuaMutasi' => 0));
+    //         return array('StokPenerimaan' => 0);
     //     } else {
     //         return $query->result();
     //     }
     // }
 
-    // function JumlahMutasiSatelit($IdObat, $IdSatelit, $Tanggal)
+    // function PemakianSekarang($IdObat, $IdSatelit, $Tanggal)
     // {
     //     $Tanggal = explode('-', $Tanggal);
     //     if ($Tanggal[0] == 1) {
-    //         $this->db->select('IdObat,
-    //         SUM(CASE WHEN Tanggal >= "' . ($Tanggal[1] - 1) . '-12-26" AND Tanggal <= "' . ($Tanggal[1]) . '-1-25" THEN MutasiKeluar+MutasiRusak ELSE 0 END) AS Mutasi');
+    //         $start_date = ($Tanggal[1] - 1) . '-12-26';
+    //         $end_date = $Tanggal[1] . '-' . $Tanggal[0] . '-25';
     //     } else {
-    //         $this->db->select('IdObat,
-    //         SUM(CASE WHEN Tanggal >= "' . $Tanggal[1] . '-' . ($Tanggal[0] - 1) . '-26" AND Tanggal <= "' .  $Tanggal[1] . '-' . ($Tanggal[0]) . '-25" THEN MutasiKeluar+MutasiRusak ELSE 0 END) AS Mutasi
-    //         ');
+    //         $start_date = $Tanggal[1] . '-' . ($Tanggal[0] - 1) . '-26';
+    //         $end_date = $Tanggal[1] . '-' . $Tanggal[0] . '-25';
     //     }
+    //     $this->db->select('SUM(MutasiKeluar) AS MutasiKeluar, SUM(MutasiRusak) AS MutasiRusak,SUM(MutasiKeluar+MutasiRusak) as TotalMutasi');
     //     $this->db->from('satelitmutasi');
+    //     $this->db->where('Tanggal BETWEEN "' . date('Y-m-d', strtotime($start_date)) . '" and "' . date('Y-m-d', strtotime($end_date)) . '"');
     //     $this->db->where('IdObat', $IdObat);
     //     $this->db->where('IdSatelit', $IdSatelit);
-    //     $this->db->group_by('IdObat');
+
     //     $query = $this->db->get();
     //     if ($query->num_rows() <= 0) {
-    //         return array(array('IdObat' => $IdObat, 'Mutasi' => 0));
+    //         return array('TotalMutasi' => 0);
     //     } else {
     //         return $query->result();
     //     }
     // }
+
+    // function Pemakian($IdObat, $IdSatelit, $Tanggal)
+    // {
+    //     $Tanggal = explode('-', $Tanggal);
+    //     if ($Tanggal[0] == 1) {
+    //         $start_date = ($Tanggal[1] - 1) . '-12-26';
+    //         $end_date = $Tanggal[1] . '-' . $Tanggal[0] . '-25';
+    //     } else {
+    //         $start_date = ($Tanggal[1] - 1) . '-12-26';
+    //         $end_date = $Tanggal[1] . '-' . ($Tanggal[0] - 1) . '-25';
+    //     }
+    //     $this->db->select('SUM(MutasiKeluar+MutasiRusak) as TotalMutasi');
+    //     $this->db->from('satelitmutasi');
+    //     $this->db->where('Tanggal BETWEEN "' . date('Y-m-d', strtotime($start_date)) . '" and "' . date('Y-m-d', strtotime($end_date)) . '"');
+    //     $this->db->where('IdObat', $IdObat);
+    //     $this->db->where('IdSatelit', $IdSatelit);
+
+    //     $query = $this->db->get();
+    //     if ($query->num_rows() <= 0) {
+    //         return array('TotalMutasi' => 0);
+    //     } else {
+    //         return $query->result();
+    //     }
+    // }
+
+    function StokPenerimaan($IdObat, $IdSatelit, $Tahun)
+    {
+        $th = ($Tahun-1);
+        $startYear = "$th-12-26";
+        $endYear = "$Tahun-12-25";
+        $this->db->select('SUM(CASE WHEN Tanggal >= "' . $startYear . '" AND Tanggal <= "' . $endYear . '" THEN Jumlah ELSE 0 END) AS Penerimaan');
+        $this->db->from('gudangsatelit');
+        $this->db->where('IdObat', $IdObat);
+        $this->db->where('IdSatelit', $IdSatelit);
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    function StokPemakaian($IdObat, $IdSatelit, $Tahun){
+        $th = ($Tahun-1);
+        $startYear = "$th-12-26";
+        $endYear = "$Tahun-12-25";
+        $this->db->select('SUM(CASE WHEN Tanggal >= "' . $startYear . '" AND Tanggal <= "' . $endYear . '" THEN MutasiKeluar ELSE 0 END) AS MutasiKeluar,
+        SUM(CASE WHEN Tanggal >= "' . $startYear . '" AND Tanggal <= "' . $endYear . '" THEN MutasiRusak ELSE 0 END) AS MutasiRusak');
+        $this->db->from('satelitmutasi');
+        $this->db->where('IdObat', $IdObat);
+        $this->db->where('IdSatelit', $IdSatelit);
+        $query = $this->db->get();
+        return $query->result();
+    }
 
     function convertIntToMonth($Tanggal)
     {
@@ -658,5 +624,11 @@ class M_satelit extends CI_Model
                 return 'Desember';
                 break;
         }
+    }
+
+    function tambahtransaksi($data)
+    {
+        $this->db->insert('satelitmutasi', $data);
+        return $this->db->affected_rows() > 0 ? true : false;
     }
 }

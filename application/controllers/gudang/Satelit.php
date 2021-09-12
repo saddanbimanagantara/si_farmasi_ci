@@ -262,22 +262,105 @@ class Satelit extends CI_Controller
                     form_error('Tanggal'))
             );
         } else {
-            $JumlahStokGudangSatelitAktif = $this->m_satelit->StokGudangSatelitAktif($IdObat, $IdSatelit, $Tanggal);
-            $StokPenerimaanSatelit  = $this->m_satelit->StokPenerimaanSatelit($IdObat, $IdSatelit, $Tanggal);
-            $SatelitPemakaianRangeBulan = $this->m_satelit->SatelitPemakaianRangeBulan($IdObat, $IdSatelit, $Tanggal);
-            $SatelitPemakaianBulanDipilih = $this->m_satelit->SatelitPemakaian($IdObat, $IdSatelit, $Tanggal);
+            $stokPenerimaan = $this->m_satelit->StokPenerimaan($IdObat, $IdSatelit, $Tanggal);
+            $stokPemakaian = $this->m_satelit->StokPemakaian($IdObat, $IdSatelit, $Tanggal);
+            // $StokAktif = $this->m_satelit->StokAktif($IdObat, $IdSatelit, $Tanggal);
+            // $StokPenerimaan  = $this->m_satelit->StokPenerimaan($IdObat, $IdSatelit, $Tanggal);
+            // $Pemakian = $this->m_satelit->Pemakian($IdObat, $IdSatelit, $Tanggal);
+            // $PemakianSekarang = $this->m_satelit->PemakianSekarang($IdObat, $IdSatelit, $Tanggal);
+            // $eTanggal = explode('-', $Tanggal);
+            // if($eTanggal[0] === '01'){
+            //     $datakembali = array(
+            //         'keterangan'                    => 'sukses', 
+            //         'StokAktif'                     => 0,
+            //         'StokPenerimaan'                => $StokPenerimaan[0]->StokPenerimaan,
+            //         'Pemakian'                      => $Pemakian[0]->TotalMutasi,
+            //         'PemakianSekarang'              => $PemakianSekarang[0]->TotalMutasi,
+            //         'SisaStok'                      => $StokAktif[0]->Jumlah - $Pemakian[0]->TotalMutasi
+            //     );
+            // }else{
+            //     $datakembali = array(
+            //         'keterangan'                    => 'sukses', 
+            //         'StokAktif'                     => ($StokAktif[0]->Jumlah-$StokPenerimaan[0]->StokPenerimaan) - $Pemakian[0]->TotalMutasi,
+            //         'StokPenerimaan'                => $StokPenerimaan[0]->StokPenerimaan,
+            //         'Pemakian'                      => $Pemakian[0]->TotalMutasi,
+            //         'PemakianSekarang'              => $PemakianSekarang[0]->TotalMutasi,
+            //         'SisaStok'                      => ($StokAktif[0]->Jumlah - $Pemakian[0]->TotalMutasi)-$PemakianSekarang[0]->TotalMutasi
+            //     );
+            // }
             $datakembali = array(
-                'keterangan'                    => 'sukses', 
-                'StokGudangSatelit'             => $JumlahStokGudangSatelitAktif,
-                'StokPenerimaan'                => $StokPenerimaanSatelit,
-                'SatelitPemakaianRangeBulan'   => $SatelitPemakaianRangeBulan,
-                'SatelitPemakianBulanDipilih'   => $SatelitPemakaianBulanDipilih
+                'stokPenerimaan'   => $stokPenerimaan[0]->Penerimaan,
+                'stokPemakaian'     => $stokPemakaian[0]->MutasiKeluar + $stokPemakaian[0]->MutasiRusak,
+                'sisaStok'          => $stokPenerimaan[0]->Penerimaan - ($stokPemakaian[0]->MutasiKeluar + $stokPemakaian[0]->MutasiRusak)
             );
         }
         echo json_encode($datakembali);
     }
 
-    function getstatus(){
-        echo 'hello';
+    function tambahtransaksi(){
+        $this->form_validation->set_rules('IdObat', 'obat', 'required');
+        $this->form_validation->set_rules('IdSatelit', 'Satelit', 'required');
+        $this->form_validation->set_rules('Tanggal', 'Tanggal', 'required');
+        $this->form_validation->set_rules('MutasiKeluar', 'Mutasi Keluar', 'required');
+        $this->form_validation->set_rules('mutasiRusak', 'Mutasi Rusak', 'required');
+        $this->form_validation->set_message('required', 'Data %s harus di isi!');
+        if($this->form_validation->run() == false){
+            $datakembali = array(
+                'keterangan'    => 'requiredfalse',
+                'data'          => array(
+                    form_error('IdObat'), form_error('IdSatelit'), form_error('Tanggal'), form_error('MutasiKeluar'), form_error('MutasiRusak')
+                )
+            );
+            echo json_encode($datakembali);
+        }else{
+            $sisaStok = $_POST['sisaStok'];
+            $MutasiKeluar = $_POST['MutasiKeluar'];
+            $MutasiRusak = $_POST['mutasiRusak'];
+            $TanggalFilter = explode('-', $_POST['TanggalFilter']);
+
+            // check tanggal jika bulan = januari
+            $tanggalFilter = $_POST['TanggalFilter'];
+            $startDate = ($tanggalFilter-1) .'/'. 12 .'/'. 26;
+            $endDate = $tanggalFilter .'/'. 12 .'/'. 25;
+            $tanggalPilih = $_POST['Tanggal'];
+            $ValidationDate = $this->check_in_range($startDate, $endDate, $tanggalPilih);
+            
+            if(($sisaStok - ($MutasiKeluar + $MutasiRusak)) < 0){
+                $datakembali = array(
+                    'keterangan'    => 'dataterlalubanyak',
+                );
+                echo json_encode($datakembali);
+            }else if($ValidationDate === true){
+                $data = array(
+                    'IdTransaksiSatelit'    => '',
+                    'MutasiKeluar'          => $_POST['MutasiKeluar'],
+                    'MutasiRusak'           => $_POST['mutasiRusak'],
+                    'Tanggal'               => $_POST['Tanggal'],
+                    'IdSatelit'             => $_POST['IdSatelit'],
+                    'IdObat'                => $_POST['IdObat']
+                );
+                $datadb = $this->m_satelit->tambahtransaksi($data);
+                $datakembali = array(
+                    'keterangan'    => $datadb,
+                    'data'          => $data,
+                );
+                echo json_encode($datakembali);
+            }else{
+                $datakembali = array(
+                    'keterangan'    => false
+                );
+                echo json_encode($ValidationDate);
+            }
+        }
     }
+
+    function check_in_range($start_date, $end_date, $date_from_user) {
+        // Convert to timestamp
+        $start = strtotime($start_date);
+        $end = strtotime($end_date);
+        $check = strtotime($date_from_user);
+        // Check that user date is between start & end
+        return (($start <= $check ) && ($check <= $end));
+    }
+
 }
